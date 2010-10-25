@@ -1,15 +1,25 @@
 <?php
+define("CHROMATICA_TOP_LEFT",		1);
+define("CHROMATICA_TOP_RIGHT",		1);
+define("CHROMATICA_BOTTOM_LEFT",	1);
+define("CHROMATICA_BOTTOM_RIGHT",	1);
 
+define("CHROMATICA_WHITE",		"FFFFFF");
+define("CHROMATICA_RED",		"FF0000");
+define("CHROMATICA_GREEN",		"00FF00");
+define("CHROMATICA_BLUE",		"0000FF");
 class chromaticaLayer{
 	public $file;
 	public $x;
 	public $y;
+	public $corner;
 	public $width;
 	public $height;
 	public $GDObject;
 	
-	public function __construct($file,$x = 0,$y = 0){
+	public function __construct($file,$corner = CHROMATICA_TOP_LEFT,$x = 0,$y = 0){
 		$this->file = $file;
+		$this->corner;
 		$this->x = $x;
 		$this->y = $y;
 	}
@@ -35,6 +45,7 @@ class chromaticaLayer{
 
 	}
 }
+
 class chromaticaImage{
 	private $layers;
 	private $canvas;
@@ -43,9 +54,10 @@ class chromaticaImage{
 		$this->canvas['Height'] = 0;
 		$this->canvas['Width'] = 0;
 	}
-	public function addLayer($chromaticaLayer,$offset_x,$offset_y){
+	public function addLayer($chromaticaLayer,$corner,$offset_x,$offset_y){
 		$chromaticaLayer->x = $offset_x;
 		$chromaticaLayer->y = $offset_y;
+		$chromaticaLayer->corner = $corner;
 		$this->layers[] = $chromaticaLayer;
 	}
 	public function crunch($outputFile){
@@ -66,11 +78,26 @@ class chromaticaImage{
 		
 		//Create the canvas...
 		$this->canvas['image'] = imagecreatetruecolor($this->canvas['Width'], $this->canvas['Height']);
+		imagealphablending($this->canvas['image'],false);
 		imagesavealpha($this->canvas['image'], true);
+		$trans_colour = imagecolorallocatealpha($this->canvas['image'], 0, 0, 0, 127);
+		imagefill($this->canvas['image'], 0, 0, $trans_colour);
 		
 		//Merge all the other layers into it
 		foreach($this->layers as $layer){
-			imagecopymerge($this->canvas['image'],$layer->GDObject,$layer->x,$layer->y,0,0,$layer->width,$layer->height,100);  
+			if($layer->GDObject != null){
+				#imagecopymerge($this->canvas['image'],$layer->GDObject,$layer->x,$layer->y,0,0,$layer->width,$layer->height,100);  
+				imagecopy(
+					$this->canvas['image'],
+					$layer->GDObject,
+					$layer->x,
+					$layer->y,
+					0,
+					0,
+					$layer->width,
+					$layer->height
+					);
+			}
 		}
 		
 		//print_r($this->canvas);
@@ -81,5 +108,19 @@ class chromaticaImage{
 		}
 		//Output the new file.
 		imagepng($this->canvas['image'], $outputFile);
+	}
+}
+
+class chromaticaText{
+	public $x;
+	public $y;
+	public $corner;
+	public $width;
+	public $height;
+	public $GDObject;
+	public function __construct($text,$colour,$corner = CHROMATICA_TOP_LEFT,$x = 0,$y = 0){
+	}
+	public function getGDObject(){
+	
 	}
 }
