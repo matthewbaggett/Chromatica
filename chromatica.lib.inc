@@ -97,6 +97,14 @@ class chromaticaImage{
 					$layer->width,
 					$layer->height
 					);
+				//Hack to 
+				$tmpImg = "/tmp/chromatica.".time().".img.tmp";
+				@unlink($tmpImg);
+				imagepng($this->canvas['image'], $tmpImg);
+				$this->canvas['image'] = imagecreatefrompng($tmpImg);
+
+				imagesavealpha($this->canvas['image'], true);
+				
 			}
 		}
 		
