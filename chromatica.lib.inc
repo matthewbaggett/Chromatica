@@ -46,9 +46,25 @@ class chromaticaLayer{
 	}
 }
 
+class chromaticaText{
+	public $x;
+	public $y;
+	public $corner;
+	public $width;
+	public $height;
+	public $GDObject;
+	public function __construct($text,$colour,$corner = CHROMATICA_TOP_LEFT,$x = 0,$y = 0){
+	}
+	public function getGDObject(){
+	
+	}
+}
+
 class chromaticaImage{
 	private $layers;
 	private $canvas;
+	
+	public $mime;
 	
 	public function __construct(){
 		$this->canvas['Height'] = 0;
@@ -60,7 +76,32 @@ class chromaticaImage{
 		$chromaticaLayer->corner = $corner;
 		$this->layers[] = $chromaticaLayer;
 	}
-	public function crunch($outputFile){
+	private function saveAndReload(){
+		$tmpImg = "/tmp/chromatica.".time().".img.tmp";
+		@unlink($tmpImg);
+		imagepng($this->canvas['image'], $tmpImg);
+		$this->canvas['image'] = imagecreatefrompng($tmpImg);
+		@unlink($tmpImg);
+		imagesavealpha($this->canvas['image'], true);
+	}
+	public function scale($x,$y){
+		$scaled = imagecreatetruecolor($x,$y);
+		imagecopyresized(
+			$scaled,
+			$this->canvas['image'],
+			0,0,0,0,
+			$x,
+			$y,
+			$this->canvas['Width'],
+			$this->canvas['Height']
+		);
+		unset($this->canvas['image']);
+		$this->canvas['image'] = $scaled;
+		$this->saveAndReload();
+		$this->canvas['Width'] 		= $x;
+		$this->canvas['Height'] 	= $y;
+	}
+	public function crunch($outputFile = false){
 		//print_r($this->layers);
 		//Load all the image objects
 		foreach($this->layers as $layer){
@@ -109,25 +150,27 @@ class chromaticaImage{
 		
 		//print_r($this->canvas);
 		
-		//If the file already exists, destroy it		
-		if(file_exists($outputFile)){
-			unlink($outputFile);
+		if($outputFile !== FALSE){
+			//If the file already exists, destroy it	
+			if(file_exists($outputFile)){
+				unlink($outputFile);
+			}
+			//Output the new file.
+			imagepng($this->canvas['image'], $outputFile);
+			$this->mime = getimagesize($outputFile);
+			return file_get_contents($outputFile);
+		}else{
+			$tmpImg = "/tmp/chromatica.".time().".img.tmp";
+			@unlink($tmpImg);
+			imagepng($this->canvas['image'], $tmpImg);
+			$tmpImgData = file_get_contents($tmpImg);
+			$this->mime = getimagesize($tmpImg);
+			$this->canvas['image'] = imagecreatefrompng($tmpImg);
+			@unlink($tmpImg);
+			imagesavealpha($this->canvas['image'], true);
+			return $tmpImgData;
 		}
-		//Output the new file.
-		imagepng($this->canvas['image'], $outputFile);
 	}
 }
 
-class chromaticaText{
-	public $x;
-	public $y;
-	public $corner;
-	public $width;
-	public $height;
-	public $GDObject;
-	public function __construct($text,$colour,$corner = CHROMATICA_TOP_LEFT,$x = 0,$y = 0){
-	}
-	public function getGDObject(){
-	
-	}
-}
+
