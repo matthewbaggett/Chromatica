@@ -64,7 +64,8 @@ class chromaticaImage{
 	private $layers;
 	private $canvas;
 	
-	public $mime;
+	public $meta;
+	public $outputFormat = 'png';
 	
 	public function __construct(){
 		$this->canvas['Height'] = 0;
@@ -77,16 +78,18 @@ class chromaticaImage{
 		$this->layers[] = $chromaticaLayer;
 	}
 	private function saveAndReload(){
-		$tmpImg = "/tmp/chromatica.".time().".img.tmp";
+		$tmpImg = "/tmp/chromatica.".microtime(true).".img.tmp";
 		@unlink($tmpImg);
 		imagepng($this->canvas['image'], $tmpImg);
 		$this->canvas['image'] = imagecreatefrompng($tmpImg);
 		@unlink($tmpImg);
 		imagesavealpha($this->canvas['image'], true);
+		$this->canvas['Width'] 		= imagesx($this->canvas['image']);
+		$this->canvas['Height'] 	= imagesy($this->canvas['image']);
 	}
 	public function scale($x,$y){
 		$scaled = imagecreatetruecolor($x,$y);
-		imagecopyresized(
+		imagecopyresampled(
 			$scaled,
 			$this->canvas['image'],
 			0,0,0,0,
@@ -95,14 +98,12 @@ class chromaticaImage{
 			$this->canvas['Width'],
 			$this->canvas['Height']
 		);
-		unset($this->canvas['image']);
 		$this->canvas['image'] = $scaled;
 		$this->saveAndReload();
-		$this->canvas['Width'] 		= $x;
-		$this->canvas['Height'] 	= $y;
+		
+		
 	}
 	public function crunch($outputFile = false){
-		//print_r($this->layers);
 		//Load all the image objects
 		foreach($this->layers as $layer){
 			$layer->getGDObject();
@@ -141,35 +142,56 @@ class chromaticaImage{
 				//Hack to make layers save ontop of each other correctly.
 				$tmpImg = "/tmp/chromatica.".time().".img.tmp";
 				@unlink($tmpImg);
+
 				imagepng($this->canvas['image'], $tmpImg);
 				$this->canvas['image'] = imagecreatefrompng($tmpImg);
 				imagesavealpha($this->canvas['image'], true);
 				
 			}
 		}
-		
-		//print_r($this->canvas);
-		
 		if($outputFile !== FALSE){
 			//If the file already exists, destroy it	
 			if(file_exists($outputFile)){
 				unlink($outputFile);
 			}
 			//Output the new file.
-			imagepng($this->canvas['image'], $outputFile);
-			$this->mime = getimagesize($outputFile);
+			$this->saveToFile($outputFile,$this->canvas['image']);
+			$this->meta = getimagesize($outputFile);
+		
 			return file_get_contents($outputFile);
 		}else{
 			$tmpImg = "/tmp/chromatica.".time().".img.tmp";
 			@unlink($tmpImg);
 			imagepng($this->canvas['image'], $tmpImg);
 			$tmpImgData = file_get_contents($tmpImg);
-			$this->mime = getimagesize($tmpImg);
+			$this->meta = getimagesize($tmpImg);
 			$this->canvas['image'] = imagecreatefrompng($tmpImg);
 			@unlink($tmpImg);
 			imagesavealpha($this->canvas['image'], true);
 			return $tmpImgData;
 		}
+	}
+	public function saveToFile($file,$im = false){
+		if($im === false){
+			$im = $this->canvas['image'];
+		}
+		$this->canvas['Width'] 		= imagesx($this->canvas['image']);
+		$this->canvas['Height'] 	= imagesy($this->canvas['image']);
+		switch($this->outputFormat){
+			case 'jpg':
+			case 'jpeg':
+				imagejpeg($im, $file);
+				break;
+			case 'png':
+			default:
+				imagepng($im, $file);
+		}
+			
+	}
+	
+	public function scaleAndCrunch($file,$x,$y){
+		$this->scale($x,$y);
+		$this->saveToFile($file);
 	}
 }
 
